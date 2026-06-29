@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clean Data — $1</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            color: #1a1a2e;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 3rem;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .price { font-size: 3rem; font-weight: 800; color: #0d6efd; margin: 0.5rem 0; }
+        .subtitle { color: #6c757d; font-size: 1.1rem; margin-bottom: 2rem; }
+        .features {
+            text-align: left;
+            margin: 1.5rem 0;
+            padding: 0;
+            list-style: none;
+        }
+        .features li {
+            padding: 0.5rem 0;
+            font-size: 0.95rem;
+            color: #495057;
+        }
+        .features li::before { content: "✓ "; color: #0d6efd; font-weight: bold; }
+        .upload-area {
+            border: 2px dashed #dee2e6;
+            border-radius: 12px;
+            padding: 2.5rem 1rem;
+            margin: 1.5rem 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #f8f9fa;
+        }
+        .upload-area:hover { border-color: #0d6efd; background: #f0f4ff; }
+        .upload-area.dragover { border-color: #0d6efd; background: #e8f0fe; }
+        .upload-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .upload-text { color: #6c757d; font-size: 0.9rem; }
+        .upload-text strong { color: #0d6efd; }
+        .btn {
+            display: inline-block;
+            background: #0d6efd;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+            text-decoration: none;
+        }
+        .btn:hover { background: #0b5ed7; }
+        .btn:disabled { background: #adb5bd; cursor: not-allowed; }
+        .file-name { margin-top: 0.5rem; font-size: 0.85rem; color: #0d6efd; }
+        .footer { margin-top: 2rem; font-size: 0.8rem; color: #adb5bd; }
+        input[type="file"] { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Clean Data</h1>
+        <div class="price">$1</div>
+        <p class="subtitle">Upload your messy CSV. Get a clean one back.</p>
+        
+        <ul class="features">
+            <li>Dates normalized to YYYY-MM-DD</li>
+            <li>Phone numbers formatted consistently</li>
+            <li>Currency symbols and commas stripped</li>
+            <li>Duplicate rows removed</li>
+            <li>Extra whitespace cleaned</li>
+        </ul>
+
+        <div class="upload-area" id="dropArea">
+            <div class="upload-icon">📂</div>
+            <div class="upload-text">Drop your CSV or Excel file here, or <strong>click to browse</strong></div>
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
+            <div class="file-name" id="fileName"></div>
+        </div>
+
+        <a class="btn" id="payBtn" disabled href="#">
+            💳 Clean My Data — $1
+        </a>
+
+        <p style="margin-top: 1rem; font-size: 0.85rem; color: #6c757d;">
+            No account needed. Stripe secure checkout.
+        </p>
+
+        <div class="footer">
+            Processed by automation. No AI. Every row verified.
+        </div>
+    </div>
+
+    <script>
+        const dropArea = document.getElementById('dropArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const payBtn = document.getElementById('payBtn');
+
+        // Stripe Payment Link
+        const STRIPE_LINK = "https://buy.stripe.com/test_8x200j7FN2pV0yi4KqgEg00";
+
+        dropArea.addEventListener('click', () => fileInput.click());
+
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.classList.add('dragover');
+        });
+
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('dragover');
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) {
+                handleFile(fileInput.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            const valid = ['.csv', '.xlsx', '.xls'];
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+            if (!valid.includes(ext)) {
+                fileName.textContent = '❌ Please upload a CSV or Excel file';
+                fileName.style.color = '#dc3545';
+                payBtn.disabled = true;
+                return;
+            }
+            fileName.textContent = '✅ ' + file.name;
+            fileName.style.color = '#0d6efd';
+            payBtn.disabled = false;
+
+            // Store file for processing
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                sessionStorage.setItem('pendingFile', JSON.stringify({
+                    name: file.name,
+                    data: e.target.result
+                }));
+            };
+            reader.readAsDataURL(file);
+        }
+
+        payBtn.addEventListener('click', (e) => {
+            if (payBtn.disabled) return;
+            // Open Stripe checkout — file will be processed on return
+            window.open(STRIPE_LINK, '_blank');
+            payBtn.textContent = '⏳ Processing...';
+        });
+    </script>
+</body>
+</html>
